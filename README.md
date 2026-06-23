@@ -47,7 +47,7 @@ Internet
 
 Example:
 
-- `SubnetId`: `subnet-0f1d43b59123576dd`
+- `SubnetId`: `subnet-xxxxxxxx`
 - `VpcId`: `vpc-xxxxxxxx`
 
 ## Deploy via AWS Console
@@ -123,28 +123,6 @@ sudo systemctl status nginx
 curl -I http://127.0.0.1:3000
 curl -I http://127.0.0.1
 ```
-
-## Troubleshooting
-
-### Stack fails: `groupName cannot be used with subnet`
-
-The security group must be VPC-scoped. Ensure you provide **VpcId** and that it matches the VPC of your subnet.
-
-### Stack fails: `Network interfaces and subnet ID may not be specified`
-
-Do not set both `SubnetId` and `NetworkInterfaces` on the instance. The current template uses the simpler pattern (`SubnetId` + `SecurityGroupIds`).
-
-### Stack completes but site is unreachable
-
-- Confirm the subnet is **public** (route to Internet Gateway)
-- Wait 2–3 minutes for UserData to finish
-- Check Docker and nginx on the instance (see commands above)
-- Confirm security group allows ports 22 and 80
-- If using Cloudflare, try **DNS only** (grey cloud) first
-
-### AMI not found
-
-AMI IDs are region-specific. If `ami-08f44e8eca9095668` is not valid in your region, find Amazon Linux 2023 x86_64 in **EC2 → AMIs** and override the `AmiId` parameter.
 
 ## Cleanup
 
