@@ -1,6 +1,6 @@
 # AWS Security Agent Lab — OWASP Juice Shop
 
-Deploy [OWASP Juice Shop](https://owasp.org/www-project-juice-shop/) on AWS EC2 using CloudFormation. Intended for security testing and learning in an isolated lab environment.
+Deploy [OWASP Juice Shop](https://owasp.org/www-project-juice-shop/) on AWS EC2 using CloudFormation. This lab demonstrates **AWS security agent capabilities** against a deliberately vulnerable web application in an isolated environment.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Internet
 |-----------|---------|
 | **EC2** | Runs Docker + nginx on Amazon Linux 2023 |
 | **Elastic IP** | Stable public IP for DNS and access after reboot |
-| **Security Group** | Allows SSH (22) and HTTP (80) from the internet |
+| **Security Group** | Allows SSH (22), HTTP (80), and HTTPS (443) from the internet |
 | **nginx** | Reverse proxy on port 80 → Juice Shop on 127.0.0.1:3000 |
 | **Cloudflare** | Optional DNS for a custom domain |
 
@@ -139,7 +139,7 @@ Manually remove the Cloudflare DNS record if you created one.
 
 ## Security warning
 
-OWASP Juice Shop is **intentionally vulnerable**. This template exposes SSH and HTTP to the internet (`0.0.0.0/0`).
+OWASP Juice Shop is **intentionally vulnerable**. This template exposes SSH, HTTP, and HTTPS to the internet (`0.0.0.0/0`).
 
 - Use only in a **disposable lab account**
 - Do not deploy in production or with sensitive data
