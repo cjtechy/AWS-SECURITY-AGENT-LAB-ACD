@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy OWASP Juice Shop on EC2 with optional custom domain (Cloudflare DNS)
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key pair for SSH access to the instance
+
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-08f44e8eca9095668
+    Description: AMI to use (Amazon Linux 2023 x86_64)
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: EC2 instance size
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public subnet in your default VPC
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC that contains the SubnetId (usually your default VPC)
+
+  DomainName:
+    Type: String
+    Default: ''
+    Description: Optional FQDN for nginx (e.g. shop.example.com). Create the A record in Cloudflare after deploy.
+
+Conditions:
+  HasDomain: !Not [!Equals [!Ref DomainName, '']]
+
+Resources:
+  JuiceShopSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow public SSH and HTTP
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP (nginx to Juice Shop)
+
+  JuiceShopInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      ImageId: !Ref AmiId
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref JuiceShopSG
+      Tags:
+        - Key: Name
+          Value: owasp-juice-shop
+        - Key: Purpose
+          Value: security-lab
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+
+          dnf -y update
+          dnf -y install docker nginx
+
+          systemctl enable --now docker
+          docker pull bkimminich/juice-shop
+          docker run -d --name juice-shop --restart unless-stopped -p 127.0.0.1:3000:3000 bkimminich/juice-shop
+
+          SERVER_NAME="${DomainName}"
+          if [ -z "$SERVER_NAME" ]; then SERVER_NAME="_"; fi
+
+          cat > /etc/nginx/conf.d/juice-shop.conf <<'NGINX'
+          server {
+              listen 80;
+              server_name __SERVER_NAME__;
+
+              location / {
+                  proxy_pass http://127.0.0.1:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+          NGINX
+          sed -i "s/__SERVER_NAME__/$SERVER_NAME/" /etc/nginx/conf.d/juice-shop.conf
+          nginx -t
+          systemctl enable --now nginx
+          systemctl restart nginx
+
+  JuiceShopEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  JuiceShopEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt JuiceShopEIP.AllocationId
+      InstanceId: !Ref JuiceShopInstance
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref JuiceShopInstance
+
+  ElasticIp:
+    Description: Point your Cloudflare A record at this IP
+    Value: !Ref JuiceShopEIP
+
+  WebsiteURL:
+    Description: Juice Shop URL (available after UserData finishes, ~2-3 min)
+    Value: !If
+      - HasDomain
+      - !Sub 'http://${DomainName}'
+      - !Sub 'http://${JuiceShopEIP}'
+
+  CloudflareDns:
+    Description: Create this A record in Cloudflare after the stack completes
+    Value: !If
+      - HasDomain
+      - !Sub 'Type A | Name shop (or subdomain) | Content ${JuiceShopEIP} | Proxy DNS only (grey cloud) recommended for lab'
+      - !Sub 'No domain set — optional A record Content ${JuiceShopEIP}'
+
+  SSHCommand:
+    Description: SSH into the instance
+    Value: !Sub 'ssh -i <your-key.pem> ec2-user@${JuiceShopEIP}'
