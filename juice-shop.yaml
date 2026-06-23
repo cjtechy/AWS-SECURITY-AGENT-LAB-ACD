@@ -40,7 +40,7 @@ Resources:
   JuiceShopSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow public SSH, HTTP, and HTTPS
+      GroupDescription: Allow public SSH and HTTP
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -53,11 +53,6 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
           Description: HTTP (nginx to Juice Shop)
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-          Description: HTTPS (nginx to Juice Shop)
 
   JuiceShopInstance:
     Type: AWS::EC2::Instance

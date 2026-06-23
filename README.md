@@ -18,7 +18,7 @@ Internet
 |-----------|---------|
 | **EC2** | Runs Docker + nginx on Amazon Linux 2023 |
 | **Elastic IP** | Stable public IP for DNS and access after reboot |
-| **Security Group** | Allows SSH (22), HTTP (80), and HTTPS (443) from the internet |
+| **Security Group** | Allows SSH (22) and HTTP (80) from the internet |
 | **nginx** | Reverse proxy on port 80 → Juice Shop on 127.0.0.1:3000 |
 | **Cloudflare** | Optional DNS for a custom domain |
 
@@ -93,7 +93,7 @@ The template serves HTTP on port 80. You can add HTTPS at the Cloudflare edge wi
 
 Cloudflare terminates HTTPS; traffic from Cloudflare to your EC2 stays on HTTP port 80.
 
-For end-to-end TLS (origin certificate on EC2), you would need to install a Cloudflare Origin Certificate on the instance and open port 443 in the security group. That is not included in the current template.
+For end-to-end TLS on EC2, you would need to install a Cloudflare Origin Certificate and configure nginx for HTTPS. That is not included in the current template.
 
 ## Stack outputs
 
@@ -139,7 +139,7 @@ Manually remove the Cloudflare DNS record if you created one.
 
 ## Security warning
 
-OWASP Juice Shop is **intentionally vulnerable**. This template exposes SSH, HTTP, and HTTPS to the internet (`0.0.0.0/0`).
+OWASP Juice Shop is **intentionally vulnerable**. This template exposes SSH and HTTP to the internet (`0.0.0.0/0`).
 
 - Use only in a **disposable lab account**
 - Do not deploy in production or with sensitive data
